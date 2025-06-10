@@ -1,0 +1,8 @@
+Include/
+venv/
+.env
+Include/
+Scripts/
+Lib/
+config.py
+__pycache__/
