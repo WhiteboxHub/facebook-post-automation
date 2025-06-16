@@ -14,7 +14,9 @@ def main():
         poster.login()
         for group in GROUPS:
             url = group["url"]
-            poster.post_to_group(url, "Automated post for training and placement updates.")
+            image_path = group.get("image_path")
+            message = group.get("message", "Automated post for training and placement updates.")
+            poster.post_to_group(url, message, image_path=image_path)
     finally:
         poster.close()
         now = set_last_run()

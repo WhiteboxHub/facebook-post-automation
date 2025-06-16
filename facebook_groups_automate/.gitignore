@@ -6,3 +6,4 @@ Scripts/
 Lib/
 config.py
 __pycache__/
+*.json

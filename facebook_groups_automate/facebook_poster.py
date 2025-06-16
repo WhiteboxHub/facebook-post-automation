@@ -26,7 +26,7 @@ class FacebookPoster:
         human_delay(5, 8)
         log("Logged in to Facebook.")
 
-    def post_to_group(self, group_url, message):
+    def post_to_group(self, group_url, message, image_path=None):
         log(f"Navigating to group: {group_url}")
         self.driver.get(group_url)
         human_delay(5, 8)
@@ -37,6 +37,15 @@ class FacebookPoster:
             active_box = self.driver.switch_to.active_element
             active_box.send_keys(message)
             human_delay(2, 4)
+
+            # If image_path is provided, upload the image
+            if image_path:
+                # Find the file input for photo/video
+                file_input = self.driver.find_element(By.XPATH, "//input[@type='file' and @accept]")
+                file_input.send_keys(image_path)
+                log(f"Uploading image: {image_path}")
+                human_delay(5, 8)  # Wait for upload to finish
+
             post_button = self.driver.find_element(By.XPATH, "//div[@aria-label='Post']")
             post_button.click()
             log(f"Posted to group: {group_url}")
