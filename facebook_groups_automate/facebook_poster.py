@@ -3,6 +3,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+import os
 from webdriver_manager.chrome import ChromeDriverManager
 from utils import human_delay, log
 import random
@@ -151,33 +153,32 @@ class FacebookPoster:
             log(f"Navigating to group: {group_url}")
             self.driver.get(group_url)
             human_delay(5, 8)
-            
+
             # Simulate human behavior
             self.simulate_human_behavior()
-            
+
             # First ensure we're following the group
             self.follow_group(group_url)
-            
+
             # Wait for the page to fully load
             self.wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             human_delay(3, 5)
-            
+
             # Wait for any overlays to disappear
             try:
                 self.wait.until(EC.invisibility_of_element_located((
                     By.XPATH, "//ul[contains(@class, 'xuk3077')]"
                 )))
-            except:
-                pass  # Ignore if no overlay is present
-            
-            # Find the write box using multiple approaches
+            except Exception:
+                pass
+
+            # Find and click the write box
             write_box = None
             write_box_selectors = [
                 "//div[contains(@class, 'xi81zsa')]//span[contains(text(), 'Write something')]",
-                "//span[contains(text(), 'Write something')]",
-                "//div[contains(@class, 'x1lkfr7t')]//span[contains(text(), 'Write something')]"
+                "//span[contains(text(), 'Write something')]"
             ]
-            
+
             for selector in write_box_selectors:
                 try:
                     elements = self.driver.find_elements(By.XPATH, selector)
@@ -187,108 +188,163 @@ class FacebookPoster:
                             break
                     if write_box:
                         break
-                except:
+                except Exception:
                     continue
-            
+
             if not write_box:
                 raise Exception("Could not find write box")
-            
-            # Scroll to the write box
+
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", write_box)
-            human_delay(2, 4)
-            
-            # Try multiple ways to click the write box
+            human_delay(1, 2)
+
             try:
-                # Method 1: Regular click
                 write_box.click()
-            except:
+            except Exception:
                 try:
-                    # Method 2: JavaScript click
                     self.driver.execute_script("arguments[0].click();", write_box)
-                except:
-                    try:
-                        # Method 3: Actions click
-                        from selenium.webdriver.common.action_chains import ActionChains
-                        ActionChains(self.driver).move_to_element(write_box).click().perform()
-                    except:
-                        raise Exception("Could not click write box")
-            
-            human_delay(2, 4)
-            
-            # Wait for the post input field and type message
+                except Exception:
+                    ActionChains(self.driver).move_to_element(write_box).click().perform()
+
+            human_delay(2, 3)
+
+            # Type the message
             post_input = self.wait.until(EC.presence_of_element_located((
                 By.XPATH, "//div[@role='textbox' or @contenteditable='true']"
             )))
             self.type_like_human(post_input, message)
-            human_delay(2, 4)
+            human_delay(2, 3)
 
             # Handle file upload if provided
             if image_path:
                 try:
-                    # Click "Add to your post"
+                    log("Starting file upload process")
+
+                    # 1. Click "Add to your post"
                     add_to_post = self.wait.until(EC.element_to_be_clickable((
-                        By.XPATH, "//div[@aria-label='Add to your post']"
+                        By.XPATH, "//div[contains(@aria-label, 'Add to your post')]"
                     )))
                     self.driver.execute_script("arguments[0].click();", add_to_post)
-                    human_delay(2, 4)
+                    human_delay(2, 3)
 
-                    # Step 1: Click the File option
-                    file_option = self.wait.until(EC.element_to_be_clickable((
-                        By.XPATH, "//span[contains(text(), 'File')]"
-                    )))
-                    self.driver.execute_script("arguments[0].click();", file_option)
-                    human_delay(2, 4)
+                    # 2. Click the File button (specific to your HTML)
+                    file_button = None
+                    file_button_selectors = [
+                        "//div[@role='button' and .//span[contains(text(), 'File')]]",
+                        "//span[contains(text(), 'File')]/ancestor::div[@role='button']"
+                    ]
 
-                    # Step 2: Click "Choose File" in the modal
-                    choose_file = self.wait.until(EC.element_to_be_clickable((
-                        By.XPATH, "//span[contains(text(), 'Choose File')]"
-                    )))
-                    self.driver.execute_script("arguments[0].click();", choose_file)
-                    human_delay(2, 4)
+                    for selector in file_button_selectors:
+                        try:
+                            elements = self.driver.find_elements(By.XPATH, selector)
+                            for element in elements:
+                                if element.is_displayed():
+                                    file_button = element
+                                    break
+                            if file_button:
+                                break
+                        except Exception:
+                            continue
 
-                    # Step 3: Upload file
+                    if not file_button:
+                        raise Exception("Could not find File button")
+
+                    self.driver.execute_script("arguments[0].scrollIntoView();", file_button)
+                    human_delay(1, 2)
+
+                    try:
+                        file_button.click()
+                    except Exception:
+                        self.driver.execute_script("arguments[0].click();", file_button)
+
+                    log("Clicked File button successfully")
+                    human_delay(3, 5)
+
+                    # 3. Click the Choose File button (specific to your HTML)
+                    choose_file_button = None
+                    choose_file_selectors = [
+                        "//span[contains(@class, 'x1lliihq') and contains(text(), 'Choose File')]",
+                        "//span[contains(text(), 'Choose File')]",
+                        "//div[contains(@class, 'x156j7k')]//span[contains(text(), 'Choose File')]"
+                    ]
+
+                    for selector in choose_file_selectors:
+                        try:
+                            elements = self.driver.find_elements(By.XPATH, selector)
+                            for element in elements:
+                                if element.is_displayed():
+                                    choose_file_button = element
+                                    break
+                            if choose_file_button:
+                                break
+                        except Exception:
+                            continue
+
+                    if not choose_file_button:
+                        raise Exception("Could not find Choose File button")
+
+                    self.driver.execute_script("arguments[0].scrollIntoView();", choose_file_button)
+                    human_delay(1, 2)
+
+                    try:
+                        choose_file_button.click()
+                    except Exception:
+                        self.driver.execute_script("arguments[0].click();", choose_file_button)
+
+                    log("Clicked Choose File button successfully")
+                    human_delay(2, 3)
+
+                    # 4. Handle the actual file upload
                     file_inputs = self.driver.find_elements(By.XPATH, "//input[@type='file']")
-                    file_input = None
-                    for fi in file_inputs:
-                        if fi.is_displayed():
-                            file_input = fi
+                    log(f"Found {len(file_inputs)} file input elements")
+
+                    uploaded = False
+                    for file_input in file_inputs:
+                        try:
+                            self.driver.execute_script("""
+                                arguments[0].style.display = 'block';
+                                arguments[0].style.visibility = 'visible';
+                                arguments[0].style.height = 'auto';
+                                arguments[0].style.width = 'auto';
+                            """, file_input)
+
+                            abs_path = os.path.abspath(image_path)
+                            file_input.send_keys(abs_path)
+                            log(f"Uploaded file: {abs_path}")
+                            uploaded = True
                             break
-                    if not file_input:
-                        raise Exception("No visible file input found")
-                    file_input.send_keys(image_path)
-                    log(f"Uploading file: {image_path}")
+                        except Exception as e:
+                            log(f"Failed with one file input: {str(e)}")
+                            continue
+
+                    if not uploaded:
+                        raise Exception("Could not upload file")
+
+                    human_delay(5, 8)  # Wait for upload
+
+                    # 5. Click Post in the modal
+                    modal_post_button = self.wait.until(EC.element_to_be_clickable((
+                        By.XPATH, "//div[@aria-label='Post' and @role='button']"
+                    )))
+                    self.driver.execute_script("arguments[0].click();", modal_post_button)
+                    log("Clicked post button in modal")
                     human_delay(5, 8)
 
-                    # Step 4: Click Post button inside the file modal
-                    post_button = self.wait.until(EC.element_to_be_clickable((
-                        By.XPATH, "//span[contains(text(), 'Post')]/ancestor::div[@role='none']"
-                    )))
-                    self.driver.execute_script("arguments[0].click();", post_button)
-                    log(f"Successfully posted to group: {group_url}")
-                    human_delay(8, 12)
-
                 except Exception as e:
-                    log(f"Error uploading file: {str(e)}")
+                    log(f"File upload error: {str(e)}")
+                    self.driver.save_screenshot("upload_error.png")
                     raise
 
-            # Wait for any overlays to disappear before clicking post
-            try:
-                self.wait.until(EC.invisibility_of_element_located((
-                    By.XPATH, "//ul[contains(@class, 'xuk3077')]"
-                )))
-            except:
-                pass
-
-            # Click post button using JavaScript
+            # Final post button
             post_button = self.wait.until(EC.element_to_be_clickable((
                 By.XPATH, "//div[@aria-label='Post']"
             )))
             self.driver.execute_script("arguments[0].click();", post_button)
-            log(f"Successfully posted to group: {group_url}")
+            log(f"Successfully posted to {group_url}")
             human_delay(8, 12)
-            
+
         except Exception as e:
-            log(f"Failed to post in {group_url}: {str(e)}")
+            log(f"Failed to post: {str(e)}")
+            self.driver.save_screenshot("post_error.png")
             raise
 
     def close(self):
