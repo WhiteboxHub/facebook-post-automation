@@ -1,8 +1,8 @@
 Include/
 venv/
 .env
-Include/
 Scripts/
+groups_config.json
 Lib/
 config.py
 __pycache__/
