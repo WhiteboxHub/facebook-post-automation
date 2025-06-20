@@ -1,8 +1,12 @@
 Include/
 venv/
 .env
-Include/
 Scripts/
+groups_config.json
 Lib/
 config.py
 __pycache__/
+*.json
+*.png
+*.jpg
+*.pdf
